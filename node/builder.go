@@ -69,6 +69,7 @@ import (
 	"github.com/filecoin-project/lotus/node/impl"
 	"github.com/filecoin-project/lotus/node/impl/common"
 	"github.com/filecoin-project/lotus/node/impl/full"
+	"github.com/filecoin-project/lotus/node/impl/net"
 	"github.com/filecoin-project/lotus/node/modules"
 	"github.com/filecoin-project/lotus/node/modules/dtypes"
 	"github.com/filecoin-project/lotus/node/modules/helpers"
@@ -363,6 +364,7 @@ var ChainNode = Options(
 var MinerNode = Options(
 	// API dependencies
 	Override(new(api.Common), From(new(common.CommonAPI))),
+	Override(new(api.Net), From(new(net.NetAPI))),
 	Override(new(sectorstorage.StorageAuth), modules.StorageAuth),
 
 	// Actor config
