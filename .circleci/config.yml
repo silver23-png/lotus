@@ -827,6 +827,11 @@ workflows:
           target: "./itests/sdr_upgrade_test.go"
       
       - test:
+          name: test-itest-sector_miner_collateral
+          suite: itest-sector_miner_collateral
+          target: "./itests/sector_miner_collateral_test.go"
+      
+      - test:
           name: test-itest-sector_pledge
           suite: itest-sector_pledge
           target: "./itests/sector_pledge_test.go"

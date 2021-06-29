@@ -197,7 +197,7 @@ func (b *CommitBatcher) maybeStartBatch(notif bool) ([]sealiface.CommitBatchRes,
 	var res []sealiface.CommitBatchRes
 
 	if total < cfg.MinCommitBatch || total < miner5.MinAggregatedSectors {
-		res, err = b.processIndividually()
+		res, err = b.processIndividually(cfg)
 	} else {
 		res, err = b.processBatch(cfg)
 	}
@@ -312,6 +312,10 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 
 	needFunds := big.Add(collateral, aggFee)
 
+	if cfg.CollateralFromMinerBalance {
+		needFunds = big.Zero()
+	}
+
 	goodFunds := big.Add(maxFee, needFunds)
 
 	from, _, err := b.addrSel(b.mctx, mi, api.CommitAddr, goodFunds, needFunds)
@@ -331,7 +335,7 @@ func (b *CommitBatcher) processBatch(cfg sealiface.Config) ([]sealiface.CommitBa
 	return []sealiface.CommitBatchRes{res}, nil
 }
 
-func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error) {
+func (b *CommitBatcher) processIndividually(cfg sealiface.Config) ([]sealiface.CommitBatchRes, error) {
 	mi, err := b.api.StateMinerInfo(b.mctx, b.maddr, nil)
 	if err != nil {
 		return nil, xerrors.Errorf("couldn't get miner info: %w", err)
@@ -349,7 +353,7 @@ func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error
 			Sectors: []abi.SectorNumber{sn},
 		}
 
-		mcid, err := b.processSingle(mi, sn, info, tok)
+		mcid, err := b.processSingle(cfg, mi, sn, info, tok)
 		if err != nil {
 			log.Errorf("process single error: %+v", err) // todo: return to user
 			r.FailedSectors[sn] = err.Error()
@@ -363,7 +367,7 @@ func (b *CommitBatcher) processIndividually() ([]sealiface.CommitBatchRes, error
 	return res, nil
 }
 
-func (b *CommitBatcher) processSingle(mi miner.MinerInfo, sn abi.SectorNumber, info AggregateInput, tok TipSetToken) (cid.Cid, error) {
+func (b *CommitBatcher) processSingle(cfg sealiface.Config, mi miner.MinerInfo, sn abi.SectorNumber, info AggregateInput, tok TipSetToken) (cid.Cid, error) {
 	enc := new(bytes.Buffer)
 	params := &miner.ProveCommitSectorParams{
 		SectorNumber: sn,
@@ -377,6 +381,10 @@ func (b *CommitBatcher) processSingle(mi miner.MinerInfo, sn abi.SectorNumber, i
 	collateral, err := b.getSectorCollateral(sn, tok)
 	if err != nil {
 		return cid.Undef, err
+	}
+
+	if cfg.CollateralFromMinerBalance {
+		collateral = big.Zero()
 	}
 
 	goodFunds := big.Add(collateral, big.Int(b.feeCfg.MaxCommitGasFee))
